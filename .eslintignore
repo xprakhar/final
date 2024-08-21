@@ -1,0 +1,5 @@
+# ignore bundler output dir
+dist
+
+#ignore node modules
+node_modules

@@ -1,0 +1,18 @@
+{
+  "files.autoSave": "afterDelay",
+  "editor.tabSize": 2,
+  "editor.wordWrap": "on",
+  "eslint.codeActionsOnSave.mode": "problems",
+  "eslint.format.enable": true,
+  "eslint.lintTask.enable": true,
+  "eslint.problems.shortenToSingleLine": true,
+  "eslint.run": "onSave",
+  "eslint.useESLintClass": true,
+  "prettier.arrowParens": "avoid",
+  "prettier.bracketSameLine": true,
+  "prettier.experimentalTernaries": true,
+  "prettier.jsxSingleQuote": true,
+  "prettier.requireConfig": true,
+  "prettier.singleQuote": true,
+  "prettier.resolveGlobalModules": false
+}
