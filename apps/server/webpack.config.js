@@ -1,20 +1,14 @@
-"use strict"
-
-import webpack from 'webpack';
-import * as path from 'node:path';
-import * as url from 'node:url';
-import nodeExternals from 'webpack-node-externals';
-
-const filename = url.fileURLToPath(import.meta.url);
-const dirname = path.dirname(filename);
+const path = require('node:path');
+const nodeExternals = require('webpack-node-externals');
+const webpack = require('webpack');
 
 
-export default {
+module.exports = {
   mode: process.env.NODE_ENV || 'development',
   entry: './src/main.ts',
   output: {
     filename: '[name].js',
-    path: path.resolve(dirname, '../../dist/server')
+    path: path.resolve(__dirname, '../../dist/server')
   },
   resolve: {
     extensions: ['.ts', '.js'],
@@ -24,7 +18,7 @@ export default {
   },
   externalsPresets: { node: true },
   externals: nodeExternals({
-    additionalModuleDirs: [path.resolve(dirname, '../../node_modules')]
+    additionalModuleDirs: [path.resolve(__dirname, '../../node_modules')]
   }),
   module: {
     rules: [
@@ -42,5 +36,6 @@ export default {
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
     })
-  ]
+  ],
+  devtool: 'inline-source-map'
 }

@@ -73,20 +73,16 @@ export class KeysRepository implements IKeysRepository {
     publicKey: string;
     privateKey: string;
   }) {
-    try {
-      const savedDocument: KeysDocument = {
-        publicKey,
-        privateKey,
-        kid: crypto.randomUUID(),
-        createdAt: new Date(),
-        expiresAt: new Date(this.calcTTL()),
-      };
+    const savedDocument: KeysDocument = {
+      publicKey,
+      privateKey,
+      kid: crypto.randomUUID(),
+      createdAt: new Date(),
+      expiresAt: new Date(this.calcTTL()),
+    };
 
-      const result = await this.getCollection().insertOne(savedDocument);
-      return { _id: result.insertedId, ...savedDocument };
-    } catch (err) {
-      throw new Error('Failed saving Keys Document', { cause: err });
-    }
+    const result = await this.getCollection().insertOne(savedDocument);
+    return { _id: result.insertedId, ...savedDocument };
   }
 
   async findById(id: ObjectId) {

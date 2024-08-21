@@ -1,9 +1,19 @@
 /** @type {import('tailwindcss').Config} */
+
+const containerQueries = require('@tailwindcss/container-queries');
+
+
 module.exports = {
-  content: [],
+  content: [
+    './index.html',
+    'src/**/*.tsx'
+  ],
   theme: {
     extend: {},
   },
-  plugins: [],
+  darkMode: 'selector',
+  plugins: [
+    containerQueries
+  ],
 }
 

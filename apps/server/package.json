@@ -2,9 +2,8 @@
   "name": "@final/server",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "build": "cross-env NODE_ENV=development webpack --config webpack.config.js",
+    "build": "cross-env NODE_ENV=production webpack --config webpack.config.js",
     "start": "dotenvx run -f .env -- nodemon ../../dist/server/main.js",
     "dev": "npm run build && concurrently \"npm run build --watch\" \"npm start\""
   },

@@ -55,20 +55,16 @@ export class RefreshTokenRepository implements IRefreshTokenRepository {
   }
 
   async save(doc: RefreshTokenSaveDoc) {
-    try {
-      const savedDocument: RefreshTokenDocument = {
-        ...doc,
-        status: 'alive',
-        createdAt: new Date(),
-        expiresAt: new Date(this.calcTTL()),
-      };
+    const savedDocument: RefreshTokenDocument = {
+      ...doc,
+      status: 'alive',
+      createdAt: new Date(),
+      expiresAt: new Date(this.calcTTL()),
+    };
 
-      const result = await this.getCollection().insertOne(savedDocument);
+    const result = await this.getCollection().insertOne(savedDocument);
 
-      return { ...savedDocument, _id: result.insertedId };
-    } catch (err) {
-      throw new Error('Failed to save refresh token document', { cause: err });
-    }
+    return { ...savedDocument, _id: result.insertedId };
   }
 
   findByJti(jti: string): Promise<RefreshTokenDocument | null> {

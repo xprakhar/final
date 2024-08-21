@@ -20,7 +20,7 @@ export const schema = z
       .string()
       .min(1, { message: 'Confirm Password is required' }),
     email: z.string().email({ message: 'Invalid Email' }),
-    mailingList: z.enum(['subscribed', 'unsubscribed']),
+    mailingList: z.boolean(),
     birthdate: z
       .object({
         day: z
@@ -86,10 +86,6 @@ export const schema = z
         },
       )
       .transform(({ day, month, year }) => new Date(year, month - 1, day)),
-
-    termsOfService: z.literal('accepted', {
-      message: 'Must accept terms of service',
-    }),
   })
   .superRefine(({ password, confirmPassword }, ctx) => {
     if (password != confirmPassword) {

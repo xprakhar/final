@@ -41,24 +41,20 @@ export class UsersRepository implements IUsersRepository {
     email: string;
     birthdate: Date;
   }) {
-    try {
-      const { hashed, salt } = await hashPassword(password);
+    const { hashed, salt } = await hashPassword(password);
 
-      const savedDocument = {
-        _id: username,
-        password: hashed,
-        salt,
-        birthdate,
-        email,
-      };
+    const savedDocument = {
+      _id: username,
+      password: hashed,
+      salt,
+      birthdate,
+      email,
+    };
 
-      // Store user
-      const result = await this.getCollection().insertOne(savedDocument);
+    // Store user
+    const result = await this.getCollection().insertOne(savedDocument);
 
-      return { ...savedDocument, _id: result.insertedId };
-    } catch (err) {
-      throw new Error('Failed to save users document', { cause: err });
-    }
+    return { ...savedDocument, _id: result.insertedId };
   }
 
   async findById(id: string) {

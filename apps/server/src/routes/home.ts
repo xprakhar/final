@@ -9,14 +9,14 @@ import {
   response,
   queryParam,
 } from 'inversify-express-utils';
+import { StatusCodes } from 'http-status-codes';
+import errorHandler from '../utils/error-handler';
 import { TYPES } from '../inversify-types';
 import { SignupForm, schema as signupSchema } from '../schemas/signup';
 import { schema as loginSchema } from '../schemas/login';
 import type { Request, Response } from 'express';
 import { type IUsersRepository } from '../utils/repos/user-repo';
 import { type IAuthService } from 'src/services/auth-service';
-import { StatusCodes } from 'http-status-codes';
-import { sendErrorResponse, sendSuccessResponse } from '../utils/helpers';
 
 @controller('/')
 export class Home implements interfaces.Controller {
@@ -37,30 +37,19 @@ export class Home implements interfaces.Controller {
       const { username, password, email, birthdate }: SignupForm =
         signupSchema.parse(req.body);
 
-      const user = await this.userRepo.save({
+      await this.userRepo.save({
         username,
         password,
         email,
         birthdate,
       });
 
-      sendSuccessResponse(
-        res,
-        StatusCodes.CREATED,
-        'User successfully registered',
-        {
-          username: user._id,
-          email: user.email,
-        },
-      );
+      res.status(StatusCodes.CREATED).json({
+        status: 'success',
+        data: { ...(await this.authService.authorize(email, password)) },
+      });
     } catch (err) {
-      const error = err as Error;
-      sendErrorResponse(
-        res,
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        `An error occurred during user registration: ${error.message}`,
-        error,
-      );
+      errorHandler(err as Error, req, res);
     }
   }
 
@@ -69,21 +58,12 @@ export class Home implements interfaces.Controller {
     try {
       const { username: email, password } = loginSchema.parse(req.body);
 
-      const { accessToken: jwt, refreshToken } =
-        await this.authService.authorize(email, password);
-
-      sendSuccessResponse(res, StatusCodes.OK, 'Login successful', {
-        jwt,
-        refreshToken,
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: { ...(await this.authService.authorize(email, password)) },
       });
     } catch (err) {
-      const error = err as Error;
-      sendErrorResponse(
-        res,
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        `Login failed: ${error.message}`,
-        error,
-      );
+      errorHandler(err as Error, req, res);
     }
   }
 
@@ -96,17 +76,18 @@ export class Home implements interfaces.Controller {
       }
 
       const token = authHeader.substring(7);
-      const user = await this.authService.authenticate(token);
+      const { _id: username, email } =
+        await this.authService.authenticate(token);
 
-      sendSuccessResponse(res, StatusCodes.OK, `Hello ${user.email}`);
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: {
+          username,
+          email,
+        },
+      });
     } catch (err) {
-      const error = err as Error;
-      sendErrorResponse(
-        res,
-        StatusCodes.UNAUTHORIZED,
-        `Authentication failed: ${error.message}`,
-        error,
-      );
+      errorHandler(err as Error, req, res);
     }
   }
 
@@ -121,15 +102,11 @@ export class Home implements interfaces.Controller {
       const token = authHeader.substring(7);
       await this.authService.revokeToken(token);
 
-      sendSuccessResponse(res, StatusCodes.OK, 'Logged out successfully');
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+      });
     } catch (err) {
-      const error = err as Error;
-      sendErrorResponse(
-        res,
-        StatusCodes.UNAUTHORIZED,
-        `Logout failed: ${error.message}`,
-        error,
-      );
+      errorHandler(err as Error, req, res);
     }
   }
 
@@ -144,17 +121,14 @@ export class Home implements interfaces.Controller {
       }
 
       const tokens = await this.authService.refreshAccessToken(refreshToken);
-      sendSuccessResponse(res, StatusCodes.OK, 'Token refreshed successfully', {
-        jwt: tokens.accessToken,
+      res.status(StatusCodes.OK).json({
+        status: 'success',
+        data: {
+          accessToken: tokens.accessToken,
+        },
       });
     } catch (err) {
-      const error = err as Error;
-      sendErrorResponse(
-        res,
-        StatusCodes.UNAUTHORIZED,
-        `Token refresh failed: ${error.message}`,
-        error,
-      );
+      errorHandler(err as Error, null, res);
     }
   }
 }
