@@ -218,7 +218,7 @@ function TermsOfServicePanel({ form }: PanelProps) {
             {field => (
               <Field className='flex items-center gap-3'>
                 <Checkbox
-                  className='form-checkbox group inline-flex size-6 items-center justify-center rounded-md border-0 data-[checked]:bg-red-500'
+                  className='group inline-flex size-6 appearance-none items-center justify-center rounded-md border border-neutral-400 bg-neutral-50 focus:border-neutral-200 focus:ring-1 focus:ring-sky-600 focus:ring-offset-1 data-[checked]:border-0 data-[checked]:bg-red-500'
                   id={field.name}
                   checked={field.state.value}
                   onChange={checked => field.handleChange(checked)}
