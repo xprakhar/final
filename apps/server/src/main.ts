@@ -2,6 +2,9 @@ import { container } from './inversify-config';
 import { InversifyExpressServer } from 'inversify-express-utils';
 import bodyParser from 'body-parser';
 import morgan from 'morgan';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+
 import './routes/home';
 
 const server = new InversifyExpressServer(container)
@@ -9,6 +12,8 @@ const server = new InversifyExpressServer(container)
     app.use(morgan('dev'));
     app.use(bodyParser.urlencoded({ extended: true }));
     app.use(bodyParser.json());
+    app.use(cookieParser());
+    app.use(cors());
   })
   .build();
 

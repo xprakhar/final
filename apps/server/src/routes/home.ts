@@ -10,13 +10,17 @@ import {
   queryParam,
 } from 'inversify-express-utils';
 import { StatusCodes } from 'http-status-codes';
-import errorHandler from '../utils/error-handler';
+import errorHandler from '../utils/errors/err-handler';
 import { TYPES } from '../inversify-types';
-import { SignupForm, schema as signupSchema } from '../schemas/signup';
-import { schema as loginSchema } from '../schemas/login';
+import { SignupForm, schema as signupSchema } from '../utils/schemas/signup';
+import { schema as loginSchema } from '../utils/schemas/login';
 import type { Request, Response } from 'express';
-import { type IUsersRepository } from '../utils/repos/user-repo';
-import { type IAuthService } from 'src/services/auth-service';
+import { type IUsersRepository } from '../repos/users';
+import { AuthService, type IAuthService } from '../services/auth-service';
+import { parseDuration } from '../utils/helpers';
+import { RefreshTokenRepository } from '../repos/refresh-token';
+import { MongoServerError } from 'mongodb';
+import { HttpError } from '../utils/errors/errors';
 
 @controller('/')
 export class Home implements interfaces.Controller {
@@ -44,11 +48,41 @@ export class Home implements interfaces.Controller {
         birthdate,
       });
 
-      res.status(StatusCodes.CREATED).json({
-        status: 'success',
-        data: { ...(await this.authService.authorize(email, password)) },
+      const [accessToken, refreshToken] = await this.authService.authorize(
+        email,
+        password,
+      );
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: parseDuration(AuthService.JWT_LIFE),
       });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENC === 'production',
+        path: '/refresh',
+        maxAge: parseDuration(RefreshTokenRepository.LIFETIME),
+      });
+
+      res.status(StatusCodes.NO_CONTENT).end();
     } catch (err) {
+      if (err instanceof MongoServerError) {
+        if (err.code === 11000) {
+          errorHandler(
+            new HttpError(
+              StatusCodes.CONFLICT,
+              'A user with this username/email already exists',
+            ),
+            req,
+            res,
+          );
+          return;
+        }
+      }
+
       errorHandler(err as Error, req, res);
     }
   }
@@ -58,26 +92,49 @@ export class Home implements interfaces.Controller {
     try {
       const { username: email, password } = loginSchema.parse(req.body);
 
-      res.status(StatusCodes.OK).json({
-        status: 'success',
-        data: { ...(await this.authService.authorize(email, password)) },
+      const [accessToken, refreshToken] = await this.authService.authorize(
+        email,
+        password,
+      );
+
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: parseDuration(AuthService.JWT_LIFE),
       });
+
+      res.cookie('refreshToken', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENC === 'production',
+        path: '/refresh',
+        maxAge: parseDuration(RefreshTokenRepository.LIFETIME),
+      });
+
+      res.status(StatusCodes.NO_CONTENT).end();
     } catch (err) {
       errorHandler(err as Error, req, res);
     }
   }
 
+  private extractJwtFromHeader(req: Request) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new HttpError(
+        StatusCodes.BAD_REQUEST,
+        'Authorization header missing or incorrect',
+      );
+    }
+
+    return authHeader.substring(7);
+  }
+
   @httpGet('authenticate')
   async authenticate(@request() req: Request, @response() res: Response) {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new Error('Token is missing');
-      }
-
-      const token = authHeader.substring(7);
-      const { _id: username, email } =
-        await this.authService.authenticate(token);
+      const { _id: username, email } = await this.authService.authenticate(
+        this.extractJwtFromHeader(req),
+      );
 
       res.status(StatusCodes.OK).json({
         status: 'success',
@@ -92,41 +149,45 @@ export class Home implements interfaces.Controller {
   }
 
   @httpPatch('logout')
-  async logout(@request() req: Request, @response() res: Response) {
+  async logout(
+    @queryParam('refreshToken') refreshToken: string,
+    @request() req: Request,
+    @response() res: Response,
+  ) {
+    let accessToken: string | undefined;
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new Error('Token is missing');
-      }
+      accessToken = this.extractJwtFromHeader(req);
+    } catch (e) {}
 
-      const token = authHeader.substring(7);
-      await this.authService.revokeToken(token);
+    try {
+      await this.authService.revokeTokens(refreshToken, accessToken);
 
       res.status(StatusCodes.OK).json({
         status: 'success',
+        message: 'token was revoked',
       });
     } catch (err) {
-      errorHandler(err as Error, req, res);
+      errorHandler(err as Error, null, res);
     }
   }
 
-  @httpPatch('refresh')
+  @httpGet('refresh')
   async refresh(
     @queryParam('refreshToken') refreshToken: string,
     @response() res: Response,
   ) {
     try {
-      if (!refreshToken) {
-        throw new Error('Refresh token is missing');
-      }
+      const accessToken =
+        await this.authService.refreshAccessToken(refreshToken);
 
-      const tokens = await this.authService.refreshAccessToken(refreshToken);
-      res.status(StatusCodes.OK).json({
-        status: 'success',
-        data: {
-          accessToken: tokens.accessToken,
-        },
+      res.cookie('accessToken', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: parseDuration(AuthService.JWT_LIFE),
       });
+
+      res.status(StatusCodes.NO_CONTENT).end();
     } catch (err) {
       errorHandler(err as Error, null, res);
     }

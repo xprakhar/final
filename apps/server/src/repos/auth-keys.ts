@@ -1,14 +1,13 @@
 import * as crypto from 'node:crypto';
 import * as jose from 'jose';
 import { inject, injectable } from 'inversify';
-import { ObjectId, Collection } from 'mongodb';
-import { MongoDBConnection } from '../mongo';
-import { TYPES } from '../../inversify-types';
-import { IRepository } from '../../interfaces/repository';
-import { parseDuration } from '../helpers';
+import { MongoDBConnection } from '../utils/mongo';
+import { TYPES } from '../inversify-types';
+import { IRepository } from '../interfaces/repository';
+import { parseDuration } from '../utils/helpers';
 
 export interface KeysDocument extends Document {
-  kid: string; // Added kid field
+  _id: string;
   publicKey: string;
   privateKey: string;
   createdAt: Date;
@@ -30,26 +29,21 @@ export class KeysRepository implements IKeysRepository {
     this.db = conn;
   }
 
-  private getCollection(): Collection<KeysDocument> {
+  private getCollection() {
     return this.db.collection<KeysDocument>('auth_keys');
   }
 
-  calcTTL() {
-    return Date.now() + parseDuration(KeysRepository.LIFETIME);
-  }
-
-  calcCutOff() {
-    return Date.now() - parseDuration(KeysRepository.LIFETIME);
+  private calcTTL() {
+    return new Date(Date.now() + parseDuration(KeysRepository.LIFETIME));
   }
 
   async findJWKS(): Promise<jose.JSONWebKeySet | null> {
-    const cursor = this.getCollection().find({}).project<{
-      kid: string;
-      publicKey: string;
-    }>({ kid: true, publicKey: true, _id: false });
+    const cursor = this.getCollection()
+      .find({})
+      .project<{ _id: string; publicKey: string }>({ publicKey: true });
 
     const jwks: jose.JSONWebKeySet = { keys: [] };
-    for await (const { kid, publicKey: publicKeyPem } of cursor) {
+    for await (const { _id: kid, publicKey: publicKeyPem } of cursor) {
       const publicKey = crypto.createPublicKey({
         key: publicKeyPem,
         format: 'pem',
@@ -76,17 +70,17 @@ export class KeysRepository implements IKeysRepository {
     const savedDocument: KeysDocument = {
       publicKey,
       privateKey,
-      kid: crypto.randomUUID(),
+      _id: crypto.randomUUID(),
       createdAt: new Date(),
-      expiresAt: new Date(this.calcTTL()),
+      expiresAt: this.calcTTL(),
     };
 
-    const result = await this.getCollection().insertOne(savedDocument);
-    return { _id: result.insertedId, ...savedDocument };
+    await this.getCollection().insertOne(savedDocument);
+    return savedDocument;
   }
 
-  async findById(id: ObjectId) {
-    return this.getCollection().findOne({ _id: id });
+  async findById(pairId: string) {
+    return this.getCollection().findOne({ _id: pairId });
   }
 
   async findActivePair(): Promise<KeysDocument | null> {
@@ -96,20 +90,18 @@ export class KeysRepository implements IKeysRepository {
     });
   }
 
-  async updateById(id: ObjectId, changes: Partial<KeysDocument>) {
+  async updateById(pairId: string, diff: Partial<KeysDocument>) {
     const coll = this.getCollection();
 
     return coll.updateOne(
-      { _id: id },
+      { _id: pairId },
       {
-        $set: {
-          ...changes,
-        },
+        $set: diff,
       },
     );
   }
 
-  async deleteById(id: ObjectId) {
-    return this.getCollection().deleteOne({ _id: id });
+  async deleteById(pairId: string) {
+    return this.getCollection().deleteOne({ _id: pairId });
   }
 }

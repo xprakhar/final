@@ -2,13 +2,17 @@ import 'reflect-metadata';
 import { Container } from 'inversify';
 import { TYPES } from './inversify-types';
 import { MongoDBConnection } from './utils/mongo';
-import { IUsersRepository, UsersRepository } from './utils/repos/user-repo';
-import { IKeysRepository, KeysRepository } from './utils/repos/keys-repo';
+import { IUsersRepository, UsersRepository } from './repos/users';
+import { IKeysRepository, KeysRepository } from './repos/auth-keys';
 import { AuthService, IAuthService } from './services/auth-service';
 import {
   IRefreshTokenRepository,
   RefreshTokenRepository,
-} from './utils/repos/tokens-repo';
+} from './repos/refresh-token';
+import {
+  ITokenBlacklistRepository,
+  TokenBlacklistRepository,
+} from './repos/token-blacklist';
 
 const container = new Container();
 
@@ -18,6 +22,9 @@ container.bind<IKeysRepository>(TYPES.KeysRepo).to(KeysRepository);
 container
   .bind<IRefreshTokenRepository>(TYPES.RefreshTokenRepo)
   .to(RefreshTokenRepository);
+container
+  .bind<ITokenBlacklistRepository>(TYPES.TokenBlacklistRepo)
+  .to(TokenBlacklistRepository);
 container.bind<IAuthService>(TYPES.AuthService).to(AuthService);
 
 export { container };

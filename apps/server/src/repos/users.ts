@@ -1,9 +1,9 @@
 import { inject, injectable } from 'inversify';
 import { Collection } from 'mongodb';
-import { IRepository } from '../../interfaces/repository';
-import { MongoDBConnection } from '../mongo';
-import { TYPES } from '../../inversify-types';
-import { hashPassword } from '../helpers';
+import { IRepository } from '../interfaces/repository';
+import { MongoDBConnection } from '../utils/mongo';
+import { TYPES } from '../inversify-types';
+import { hashPassword } from '../utils/helpers';
 
 export interface UserDocument extends Document {
   _id: string;
@@ -19,7 +19,6 @@ export interface IUsersRepository extends IRepository<UserDocument> {
 
 @injectable()
 export class UsersRepository implements IUsersRepository {
-  private static CollName = 'users';
   private db: MongoDBConnection;
 
   constructor(@inject(TYPES.MongoDBConn) conn: MongoDBConnection) {
@@ -27,7 +26,7 @@ export class UsersRepository implements IUsersRepository {
   }
 
   private getCollection(): Collection<UserDocument> {
-    return this.db.collection<UserDocument>(UsersRepository.CollName);
+    return this.db.collection<UserDocument>('users');
   }
 
   async save({

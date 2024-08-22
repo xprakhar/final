@@ -2,33 +2,38 @@
 import * as crypto from 'node:crypto';
 import * as util from 'node:util';
 
-/**
- * Parses a duration string (e.g., "2h", "3d") into seconds.
- * @param duration - The duration string.
- * @returns The duration in seconds.
- */
 export function parseDuration(duration: string): number {
-  const match = duration.match(/^(\d+)([smhd])$/);
+  const regex = /(\d+)([smhd])/g;
+  let totalMilliseconds = 0;
+  let match: RegExpExecArray | null;
 
-  if (!match) {
+  while ((match = regex.exec(duration)) !== null) {
+    const value = Number(match[1]) || 0;
+    const unit = match[2];
+
+    switch (unit) {
+      case 's': // seconds
+        totalMilliseconds += value * 1000;
+        break;
+      case 'm': // minutes
+        totalMilliseconds += value * 60 * 1000;
+        break;
+      case 'h': // hours
+        totalMilliseconds += value * 60 * 60 * 1000;
+        break;
+      case 'd': // days
+        totalMilliseconds += value * 24 * 60 * 60 * 1000;
+        break;
+      default:
+        throw new Error(`Unsupported time unit: ${unit}`);
+    }
+  }
+
+  if (totalMilliseconds === 0) {
     throw new Error(`Invalid duration format: ${duration}`);
   }
 
-  const value = parseInt(match[1]!, 10);
-  const unit = match[2];
-
-  switch (unit) {
-    case 's': // seconds
-      return value * 1000;
-    case 'm': // minutes
-      return value * 60 * 1000;
-    case 'h': // hours
-      return value * 60 * 60 * 1000;
-    case 'd': // days
-      return value * 60 * 60 * 24 * 1000;
-    default:
-      throw new Error(`Unsupported time unit: ${unit}`);
-  }
+  return totalMilliseconds;
 }
 
 export async function hashPassword(

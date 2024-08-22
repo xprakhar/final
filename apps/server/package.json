@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cross-env NODE_ENV=production webpack --config webpack.config.js",
+    "build": "cross-env NODE_ENV=development webpack --config webpack.config.js",
     "start": "dotenvx run -f .env -- nodemon ../../dist/server/main.js",
     "dev": "npm run build && concurrently \"npm run build --watch\" \"npm start\""
   },
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
     "express": "^4.19.2",
     "http-status-codes": "^2.3.0",
     "inversify": "^6.0.2",
@@ -17,12 +19,15 @@
     "jose": "^5.7.0",
     "mongodb": "^6.8.0",
     "morgan": "^1.10.0",
+    "nanoid": "^5.0.7",
     "reflect-metadata": "^0.2.2",
     "source-map-support": "^0.5.21",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@dotenvx/dotenvx": "^1.7.0",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.4.1",
